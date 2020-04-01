@@ -1,15 +1,20 @@
 # include <iostream> 
 # include <cmath>
 # include <cstring> 
+#include <stdlib.h>
  
 using namespace std; 
  
-# define POPULATION_SIZE 30 
-# define MAXGERATIONS 50 
-# define RUNS 30 
 # define VARIABLES 3 
-# define PC 0.8 
-# define PM 0.1 
+
+// initialize here, these can be overidden by the user
+ static int POPULATION_SIZE=30 ;
+ static int MAXGERATIONS=50 ;
+ static int RUNS=30 ;
+ static double PC=0.8 ;
+ static double PM=0.1 ;
+ // 1 -- proportional, 2 -- binary tournament , 3 -- linear ranking
+ static int selectionStrategy = 1;
  
  
 struct genetic 
@@ -22,14 +27,23 @@ struct genetic
   double cfitness; 
 }; 
  
-struct genetic population[POPULATION_SIZE+1]; 
-struct genetic newpopulation[POPULATION_SIZE+1];  
-double Best_of_run[RUNS]; 
-double Best_of_genration[MAXGERATIONS]; 
-double Avg_of_genration[RUNS]; 
-double Best_of_genration_in_run[RUNS]; 
+struct genetic *population = NULL;
+struct genetic *newpopulation = NULL;
+double *Best_of_genration = NULL;
+double *Best_of_run = NULL;
+double *Avg_of_genration = NULL;
+double *Best_of_genration_in_run = NULL;
  
-int main ( ); 
+static void allocate_globals()
+{
+  population = new genetic[POPULATION_SIZE+1]; 
+  newpopulation = new genetic[POPULATION_SIZE+1];  
+  Best_of_genration = new double[MAXGERATIONS]; 
+  Best_of_run = new double[RUNS]; 
+  Avg_of_genration = new double[RUNS]; 
+  Best_of_genration_in_run = new double[RUNS]; 
+}
+
 void crossover ( int &seed ); 
 void elitist ( ); 
 void evaluate ( ); 
@@ -42,9 +56,62 @@ void report ( int generation, int run );
 void report2 (); 
 void selector ( int &seed ); 
  
- 
-int main ( ) 
+/**
+ * print usage
+ */
+static void usage(const char* prog_name)
+{
+  cerr << "usage: " << prog_name << " population_size max_generations runs pc pm <1 or 2 or 3 for selectionStrategy>" << endl;
+  cerr << "       1 -- proportional, 2 -- binary tournament , 3 -- linear ranking " << endl;
+} 
+
+/**
+ * The algorithm parameters (population size, crossover rate, etc.) may be taken from the user on the command line
+ *   population size, crossover rate, etc.
+ * # define POPULATION_SIZE 30 
+ * # define MAXGERATIONS 50 
+ * # define RUNS 30 
+ * # define PC 0.8 
+ * # define PM 0.1 
+ * N = 30; pc = 0.8; pm = 0.1; max generations (for use as a stopping condition) = 50.
+ */
+int main ( int argc, char** argv) 
 { 
+  // should accept 6 arguments, to keep code simple let's use positional arguments
+  // argv[1] == POPULATION_SIZE
+  // argv[2] == MAXGERATIONS
+  // argv[3] == RUNS
+  // argv[4] == PC
+  // argv[5] == PM
+  // argv[6] == selectionStrategy
+
+  if (argc <7) {
+   usage(argv[0]); return 1;
+  }
+
+  int arg_POPULATION_SIZE=atoi(argv[1]);
+  int arg_MAXGERATIONS=atoi(argv[2]);
+  int arg_RUNS=atoi(argv[3]);
+  double arg_PC=atof(argv[4]);
+  double arg_PM=atof(argv[5]);
+  int arg_selectionStrategy=atoi(argv[6]);
+
+  cout << arg_POPULATION_SIZE << " " << arg_MAXGERATIONS << " " << arg_RUNS << " " << arg_PC << " " << arg_PM << endl;
+  // assign to globals
+  POPULATION_SIZE = arg_POPULATION_SIZE ;
+  MAXGERATIONS = arg_MAXGERATIONS ;
+  RUNS = arg_RUNS ;
+  PC = arg_PC ;
+  PM = arg_PM ;
+  // allocate globals
+  allocate_globals();
+  selectionStrategy = arg_selectionStrategy;
+
+  //
+  // selection strategy 
+  // 1 -- proportional, 2 -- binary tournament , 3 -- linear ranking
+  //
+
   int generation; 
   int i; 
   double sum = 0.0; 
@@ -111,24 +178,24 @@ void crossover ( int &seed )
       if ( first % 2 == 0 ) 
       { 
         
-  int i; 
-  int point; 
-  double temp; 
-  point = Random_int ( 0, VARIABLES - 1, seed ); 
-  for ( i = 0; i < point; i++ ) 
-  { 
-   temp  = population[one].gene[i]; 
-   population[one].gene[i] = population[j].gene[i]; 
-   population[j].gene[i] = temp; 
-  } 
+        int i; 
+        int point; 
+        double temp; 
+        point = Random_int ( 0, VARIABLES - 1, seed ); 
+        for ( i = 0; i < point; i++ ) 
+        { 
+         temp  = population[one].gene[i]; 
+         population[one].gene[i] = population[j].gene[i]; 
+         population[j].gene[i] = temp; 
+        } 
       } 
       else 
       { 
         one = j; 
       } 
  
-    } 
-  } 
+    }
+  }
   return; 
 } 
  
